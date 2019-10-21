@@ -10,8 +10,8 @@ import (
 	"github.com/chromedp/chromedp"
 	"github.com/chromedp/chromedp/device"
 	"github.com/gin-gonic/gin"
+	log "github.com/sirupsen/logrus"
 	"io/ioutil"
-	"log"
 	"math"
 	"net/url"
 	"os"
@@ -64,12 +64,12 @@ func ChromedpShot(c *gin.Context) {
 		return
 	}
 
-	if err := runChromedp(u, imagePath); handleError(c, err) {
+	if err := runChromedp(u, imagePath); err != nil {
+		log.WithField("URL", u).WithField("C", timeString).WithError(err)
+		c.JSON(200, gin.H{"msg": err.Error()})
 		return
 	}
-
 	c.File(imagePath)
-
 }
 
 func runChromedp(targetUrl, imagePath string) error {

@@ -44,7 +44,7 @@ VOLUME /data
 CMD ["chromegin/app"]
 ```
 
-## 3. Docker 编译和运行
+## 2. Docker 编译和运行
 ```bash
 git clone https://github.com/mojocn/chromegin.git && cd chromegin
 # 编译build image 名称位chromegin  docker run 挂在host主机/data/chrome_screen_shot 目录保存图片
@@ -54,7 +54,7 @@ docker build -t chromegin . && docker run -p 6666:6666 -v /data/chrome_screen_sh
 从dockerhub上pull
 `docker pull mojotvcn/chromegin`
 
-## 2. Chromedp RESTful API 接口说明
+## 3. Chromedp RESTful API 接口说明
 |  表头   | 表头  |
 |  ----  | ----  |
 | Method | GET |

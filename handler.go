@@ -55,10 +55,11 @@ func ChromedpShot(c *gin.Context) {
 	if handleError(c, err) {
 		return
 	}
+	//md5 url 和时间信息一起拼接成截图名称.png
 	fileName := fmt.Sprintf("%s_%s.png", t.Format("060102T150405"), md5Encode(u))
 	//imagePath := path.Join(os.TempDir(), fileName)
 	imagePath := path.Join("/data", fileName)
-	if _, err := os.Stat(imagePath); err == nil {
+	if _, err := os.Stat(imagePath); os.IsExist(err) {
 		//如果图片存在就直接gin response 图片
 		c.File(imagePath)
 		return
@@ -83,11 +84,10 @@ func runChromedp(targetUrl, imagePath string) error {
 
 	// capture screenshot of an element
 	var buf []byte
-	// capture entire browser viewport, returning png with quality=90
+	// capture entire browser viewport, returning png with quality=50
 	if err := chromedp.Run(ctx, fullScreenshot(targetUrl, 50, &buf)); err != nil {
 		return err
 	}
-	log.Println(imagePath)
 	return ioutil.WriteFile(imagePath, buf, 0644)
 }
 

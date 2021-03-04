@@ -2,101 +2,93 @@ package main
 
 import (
 	"context"
-	"crypto/md5"
-	"encoding/hex"
-	"fmt"
+	"crypto/sha256"
+	"encoding/base64"
 	"github.com/chromedp/cdproto/emulation"
 	"github.com/chromedp/cdproto/page"
 	"github.com/chromedp/chromedp"
-	"github.com/chromedp/chromedp/device"
 	"github.com/gin-gonic/gin"
-	log "github.com/sirupsen/logrus"
 	"io/ioutil"
+	"log"
 	"math"
-	"net/url"
-	"os"
-	"path"
-	"strings"
+	"path/filepath"
 	"time"
 )
 
 func handleError(c *gin.Context, err error) bool {
 	if err != nil {
 		//logrus.WithError(err).Error("gin context http handler error")
-		c.JSON(200, gin.H{"msg": err.Error()})
+		c.JSON(200, ResJob{
+			Code: 400,
+			Msg:  err.Error(),
+			Uri:  "",
+		})
 		return true
 	}
 	return false
 }
-func md5Encode(data string) string {
-	h := md5.New()
-	h.Write([]byte(data))
-	return hex.EncodeToString(h.Sum(nil))
-}
-func ChromedpShot(c *gin.Context) {
-	var err error
-	u := c.Query("u")
-	//url decode 参数
-	u, err = url.QueryUnescape(u)
-	if handleError(c, err) {
-		return
-	}
-	if !strings.HasPrefix(u, "http") {
-		c.JSON(200, gin.H{"msg": u + " 地址无效"})
-		return
-	}
-
-	timeString := c.Query("c")
-	timeString, err = url.QueryUnescape(timeString)
-	if handleError(c, err) {
-		return
-	}
-	t, err := time.Parse("2006-01-02 15:04:05", timeString)
-	if handleError(c, err) {
-		return
-	}
-	//md5 url 和时间信息一起拼接成截图名称.png
-	fileName := fmt.Sprintf("%s_%s.png", t.Format("060102T150405"), md5Encode(u))
-	//imagePath := path.Join(os.TempDir(), fileName)
-	imagePath := path.Join("/data", fileName)
-	if _, err := os.Stat(imagePath); os.IsExist(err) {
-		//如果图片存在就直接gin response 图片
-		c.File(imagePath)
-		return
-	}
-
-	if err := runChromedp(u, imagePath); err != nil {
-		log.WithField("URL", u).WithField("C", timeString).WithError(err)
-		c.JSON(200, gin.H{"msg": err.Error()})
-		return
-	}
-	c.File(imagePath)
+func sha256String(data []byte) string {
+	h := sha256.New()
+	h.Write(data)
+	return base64.RawURLEncoding.EncodeToString(h.Sum(nil))
 }
 
-func runChromedp(targetUrl, imagePath string) error {
-	// create context
-	// timeout 90 秒
-	timeContext, cancelFunc := context.WithTimeout(context.Background(), time.Second*90)
-	defer cancelFunc()
-
-	ctx, cancel := chromedp.NewContext(timeContext)
+func takeShot(arg *ReqJob) (res *ResJob, err error) {
+	//set time-out
+	ctx, cancel := chromedp.NewContext(
+		context.Background(),
+		chromedp.WithLogf(log.Printf),
+	)
 	defer cancel()
+
+	// create a timeout
+
+	if arg.Timeout > 0 {
+		ctx, cancel = context.WithTimeout(ctx, time.Duration(arg.Timeout)*time.Second)
+		defer cancel()
+	}
 
 	// capture screenshot of an element
 	var buf []byte
-	// capture entire browser viewport, returning png with quality=50
-	if err := chromedp.Run(ctx, fullScreenshot(targetUrl, 50, &buf)); err != nil {
-		return err
+	if err := chromedp.Run(ctx, makeActions(arg, &buf)); err != nil {
+		return nil, err
 	}
-	return ioutil.WriteFile(imagePath, buf, 0644)
+	uri := sha256String(buf) + ".png"
+	fp := filepath.Join(staticDir, uri)
+	if err := ioutil.WriteFile(fp, buf, 0o644); err != nil {
+		return nil, err
+	}
+	return &ResJob{
+		Code: 200,
+		Msg:  "OK",
+		Uri:  uri,
+	}, err
+
 }
 
-func fullScreenshot(urlstr string, quality int64, res *[]byte) chromedp.Tasks {
-	return chromedp.Tasks{
-		chromedp.Emulate(device.IPad),
-		chromedp.EmulateViewport(1024, 2048, chromedp.EmulateScale(2)),
-		chromedp.Navigate(urlstr),
-		chromedp.ActionFunc(func(ctx context.Context) error {
+// makeActions takes a screenshot of a specific element.
+func makeActions(arg *ReqJob, res *[]byte) chromedp.Tasks {
+	ts := chromedp.Tasks{
+		chromedp.Navigate(arg.Url),
+	}
+	if arg.PxWidth > 0 && arg.PxHeight > 0 {
+		ts = append(ts, chromedp.EmulateViewport(arg.PxWidth, arg.PxHeight))
+	}
+	if arg.Wait > 0 {
+		wtFn := func(ctx context.Context) error {
+			time.Sleep(time.Duration(arg.Wait) * time.Second)
+			return nil
+		}
+		ts = append(ts, chromedp.ActionFunc(wtFn))
+	}
+	if arg.Sel != "" {
+		ts = append(ts, chromedp.WaitVisible(arg.Sel), chromedp.Screenshot(arg.Sel, res, chromedp.NodeVisible, chromedp.ByID))
+	} else {
+		if arg.Quality < 1 {
+			arg.Quality = 80
+		}
+
+		fullScreenFn := func(ctx context.Context) error {
 			// get layout metrics
 			_, _, contentSize, err := page.GetLayoutMetrics().Do(ctx)
 			if err != nil {
@@ -115,9 +107,10 @@ func fullScreenshot(urlstr string, quality int64, res *[]byte) chromedp.Tasks {
 			if err != nil {
 				return err
 			}
+
 			// capture screenshot
 			*res, err = page.CaptureScreenshot().
-				WithQuality(quality).
+				WithQuality(arg.Quality).
 				WithClip(&page.Viewport{
 					X:      contentSize.X,
 					Y:      contentSize.Y,
@@ -129,6 +122,11 @@ func fullScreenshot(urlstr string, quality int64, res *[]byte) chromedp.Tasks {
 				return err
 			}
 			return nil
-		}),
+		}
+
+		ts = append(ts, chromedp.ActionFunc(fullScreenFn))
+
 	}
+
+	return ts
 }

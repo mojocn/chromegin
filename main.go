@@ -2,42 +2,40 @@ package main
 
 import (
 	"fmt"
+	"github.com/gin-contrib/static"
 	"github.com/gin-gonic/gin"
-	log "github.com/sirupsen/logrus"
-	"os"
+	"log"
+)
+
+const staticDir = "/pic"
+
+var (
+	BuildAt, GitHash string
 )
 
 func main() {
 
 	r := gin.New()
+	r.Use(static.Serve("/", static.LocalFile(staticDir, true)))
 
 	//开发接口
-	{
-		//chromedp run screen shot
-		r.GET("/python/ss", ChromedpShot)
-		r.GET("/open/chromedp/screen/shot", ChromedpShot)
-	}
+	r.POST("/api", func(c *gin.Context) {
+		c.Header("built_at", BuildAt)
+		c.Header("git_hash", GitHash)
+		arg := new(ReqJob)
+		err := c.ShouldBind(arg)
+		if handleError(c, err) {
+			return
+		}
+		res, err := takeShot(arg)
+		if handleError(c, err) {
+			return
+		}
+
+		res.Url = fmt.Sprintf("http://%s/%s", c.Request.Host, res.Uri)
+
+		c.JSON(200, res)
+	})
 
 	log.Fatal(r.Run(":6666"))
-}
-
-func init() {
-
-	// open a file
-	f, err := os.OpenFile("/data/golang_chrome_dp.log", os.O_APPEND|os.O_CREATE|os.O_RDWR, 0666)
-	if err != nil {
-		fmt.Printf("error opening file: %v", err)
-	}
-
-	// don't forget to close it
-	defer f.Close()
-
-	// Log as JSON instead of the default ASCII formatter.
-	log.SetFormatter(&log.JSONFormatter{})
-
-	// Output to stderr instead of stdout, could also be a file.
-	log.SetOutput(f)
-
-	// Only log the warning severity or above.
-	log.SetLevel(log.DebugLevel)
 }

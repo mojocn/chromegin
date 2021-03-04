@@ -62,3 +62,15 @@ docker build -t chromegin . && docker run -p 6666:6666 -v /data/chrome_screen_sh
 | URL  | 127.0.0.1:6666/open/chromedp/screen/shot |
 | u  | url-encode 之后的截图网址 |
 | c  | url-encode 时间 格式 `2018-09-09 12:12:12` |
+
+
+## 5 使用
+```bash
+curl --location --request POST 'http://localhost:6666/api' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+    "sel":"",
+    "url":"https://localhost:9527/#/jms/report/2021-02-01/2021-03-03",
+    "wait":3
+}'
+```

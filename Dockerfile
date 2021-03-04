@@ -36,10 +36,9 @@ RUN go mod download
 
 COPY $GO_DIR .
 
-ENV RUNBIN=/run/bin/chromegin
 RUN export GITHASH=$(git rev-parse --short HEAD) && \
     export BUILDAT=$(date) && \
-    go build -ldflags "-w -s -X 'main.BuildAt=$BUILDAT' -X 'main.GitHash=$GITHASH'" -o $RUNBIN
+    go build -ldflags "-w -s -X 'main.BuildAt=$BUILDAT' -X 'main.GitHash=$GITHASH'"
 
 
 VOLUME /pic

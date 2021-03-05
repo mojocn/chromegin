@@ -44,6 +44,6 @@ RUN export GITHASH=$(git rev-parse --short HEAD) && \
 VOLUME /pic
 EXPOSE 6666
 
-RUN ls -al && pwd
+RUN rm -rf /usr/local/go
 
 CMD ["/gobin/chromegin"]

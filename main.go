@@ -10,7 +10,8 @@ import (
 const staticDir = "/pic"
 
 var (
-	BuildAt, GitHash string
+	GitHash string
+	BuildAt string
 )
 
 func main() {

@@ -17,6 +17,7 @@ import (
 
 func handleError(c *gin.Context, err error) bool {
 	if err != nil {
+		log.Println(err)
 		//logrus.WithError(err).Error("gin context http handler error")
 		c.JSON(200, ResJob{
 			Code: 400,

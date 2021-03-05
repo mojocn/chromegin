@@ -20,8 +20,6 @@ func main() {
 
 	//开发接口
 	r.POST("/api", func(c *gin.Context) {
-		c.Header("built_at", BuildAt)
-		c.Header("git_hash", GitHash)
 		arg := new(ReqJob)
 		err := c.ShouldBind(arg)
 		if handleError(c, err) {
@@ -36,6 +34,8 @@ func main() {
 
 		c.JSON(200, res)
 	})
-
+	r.GET("version", func(context *gin.Context) {
+		context.JSON(200, gin.H{"BuildAt": BuildAt, "GitHash": GitHash})
+	})
 	log.Fatal(r.Run(":6666"))
 }

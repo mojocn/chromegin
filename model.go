@@ -1,20 +1,21 @@
 package main
 
+//ReqJob 截图的参数
 type ReqJob struct {
-	Url      string `json:"url"`
-	PxHeight int64  `json:"px_height"`
-	PxWidth  int64  `json:"px_width"`
-	Quality  int64  `json:"quality"`
-	Sel      string `json:"sel"`     // css 选择器
-	Timeout  int    `json:"timeout"` //等待second
-	Wait     int    `json:"wait"`
-	Format   string `json:"format"` //pdf or image
+	Url      string `json:"url"`       //必填
+	PxHeight int64  `json:"px_height"` //像素 可选
+	PxWidth  int64  `json:"px_width"`  //像素 可选
+	Quality  int64  `json:"quality"`   //图片质量 可选
+	Sel      string `json:"sel"`       //css 选择器 可选
+	Timeout  int    `json:"timeout"`   //time out second
+	Wait     int    `json:"wait"`      //等待时间  second
 }
 
+//ResJob 截图的结果
 type ResJob struct {
-	Code int    `json:"code"`
-	Msg  string `json:"msg"`
-	Uri  string `json:"uri"`
-	Url  string `json:"url"`
-	B64  string `json:"b_64"`
+	Code int    `json:"code"` //200==ok
+	Msg  string `json:"msg"`  //msg
+	Uri  string `json:"uri"`  //uri
+	Url  string `json:"url"`  //图片地址
+	B64  string `json:"b_64"` //base64编码的图片内容
 }

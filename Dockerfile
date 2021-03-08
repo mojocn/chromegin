@@ -44,6 +44,7 @@ RUN export GITHASH=$(git rev-parse --short HEAD) && \
 VOLUME /pic
 EXPOSE 6666
 
-RUN rm -rf /usr/local/go
+#remove golang files
+RUN rm -rf /usr/local/go /root/go /root/.cache /root/.config
 
 CMD ["/gobin/chromegin"]

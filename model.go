@@ -16,4 +16,5 @@ type ResJob struct {
 	Msg  string `json:"msg"`
 	Uri  string `json:"uri"`
 	Url  string `json:"url"`
+	B64  string `json:"b_64"`
 }

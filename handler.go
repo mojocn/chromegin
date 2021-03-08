@@ -59,10 +59,15 @@ func takeShot(arg *ReqJob) (res *ResJob, err error) {
 	if err := ioutil.WriteFile(fp, buf, 0o644); err != nil {
 		return nil, err
 	}
+
+	dataString := "data:image/png;base64," + base64.StdEncoding.EncodeToString(buf)
+
 	return &ResJob{
 		Code: 200,
 		Msg:  "OK",
 		Uri:  uri,
+		Url:  "",
+		B64:  dataString,
 	}, err
 
 }

@@ -54,26 +54,28 @@ func takeShot(arg *ReqJob) (res *ResJob, err error) {
 	if err := chromedp.Run(ctx, makeActions(arg, &buf)); err != nil {
 		return nil, err
 	}
-	uri := sha256String(buf) + ".png"
-	fp := filepath.Join(staticDir, uri)
+	fileName := sha256String(buf) + ".jpg"
+	fp := filepath.Join(staticDir, fileName)
+
 	if err := ioutil.WriteFile(fp, buf, 0o644); err != nil {
 		return nil, err
 	}
 
-	dataString := "data:image/png;base64," + base64.StdEncoding.EncodeToString(buf)
-
 	return &ResJob{
 		Code: 200,
 		Msg:  "OK",
-		Uri:  uri,
+		Uri:  "files/" + fileName,
 		Url:  "",
-		B64:  dataString,
 	}, err
 
 }
 
 // makeActions takes a screenshot of a specific element.
 func makeActions(arg *ReqJob, res *[]byte) chromedp.Tasks {
+	if arg.Scale < 1 {
+		arg.Scale = 1
+	}
+
 	ts := chromedp.Tasks{
 		chromedp.Navigate(arg.Url),
 	}
@@ -116,13 +118,14 @@ func makeActions(arg *ReqJob, res *[]byte) chromedp.Tasks {
 
 			// capture screenshot
 			*res, err = page.CaptureScreenshot().
+				WithFormat("jpeg").
 				WithQuality(arg.Quality).
 				WithClip(&page.Viewport{
 					X:      contentSize.X,
 					Y:      contentSize.Y,
 					Width:  contentSize.Width,
 					Height: contentSize.Height,
-					Scale:  1,
+					Scale:  arg.Scale,
 				}).Do(ctx)
 			if err != nil {
 				return err
